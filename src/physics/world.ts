@@ -407,6 +407,7 @@ export function simulateBall(
     const limit = COURT.halfWidth - BALL.radius;
     if (x < -limit) { x = -limit; if (vx < 0) vx = -vx * BALL.wallRestitution; }
     else if (x > limit) { x = limit; if (vx > 0) vx = -vx * BALL.wallRestitution; }
+    if (y > COURT.softCeiling) { y = COURT.softCeiling; if (vy > 0) vy = 0; }
 
     // Net capsule.
     const py = y >= nh ? nh : clamp(y, 0, nh);

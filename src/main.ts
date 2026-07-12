@@ -526,6 +526,19 @@ class App {
     const by = lerp(b.prevY, b.y, alpha);
     this.renderer.ballVis.update(bx, by, b.vx, b.vy, b.angle, true, s.reducedMotion);
 
+    // Off-screen indicator while the ball flies above the visible area.
+    if (this.mode !== 'menu' && b.state !== 'dead') {
+      const ndc = this.renderer.project(bx, by);
+      if (ndc.y > 1.0) {
+        const sx = clamp((ndc.x * 0.5 + 0.5) * window.innerWidth, 26, window.innerWidth - 26);
+        this.ui.setBallMarker(sx);
+      } else {
+        this.ui.setBallMarker(null);
+      }
+    } else {
+      this.ui.setBallMarker(null);
+    }
+
     if (this.debug.visible) {
       this.renderer.updateDebug(
         w.players[0].x, w.players[0].y,

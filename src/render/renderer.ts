@@ -290,6 +290,13 @@ export class GameRenderer {
     }
   }
 
+  private projVec = new THREE.Vector3();
+
+  /** Project a world-plane point to normalized device coords (reused vec). */
+  project(x: number, y: number): THREE.Vector3 {
+    return this.projVec.set(x, y, 0).project(this.camera);
+  }
+
   /** Small, decaying camera nudge for exceptional impacts. */
   impulse(strength: number): void {
     if (!this.cameraImpulseEnabled) return;

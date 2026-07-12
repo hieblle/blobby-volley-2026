@@ -21,8 +21,10 @@ export const SIM = {
 export const COURT = {
   /** Horizontal half-extent of the playable court (walls at ±halfWidth). */
   halfWidth: 12,
-  /** Visible ceiling used only for velocity sanity clamping (no collider). */
-  softCeiling: 26,
+  /** Invisible ceiling a little above the camera view: the ball may leave
+   *  the screen briefly, but never sails absurdly far. The HUD shows a
+   *  position marker while it is out of view. */
+  softCeiling: 17.5,
   /** Net rectangle half-thickness. */
   netHalfWidth: 0.14,
   /** Net height from the floor to the top of the tape. */
@@ -40,8 +42,9 @@ export const PLAYER = {
   airAccel: 34,
   /** Maximum horizontal speed (cu/s). */
   maxSpeed: 9.2,
-  /** Upward velocity applied on jump (cu/s). */
-  jumpImpulse: 13.2,
+  /** Upward velocity applied on jump (cu/s). Tuned so a full jump carries
+   *  most of the body clearly above the net tape. */
+  jumpImpulse: 14.6,
   /** Gravity applied to characters (cu/s²). Stronger than ball gravity so
    *  jumps feel snappy while the ball floats. */
   gravity: 34,

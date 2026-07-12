@@ -90,10 +90,12 @@ export class TrainingSession {
       this.state.landingX = null;
     }
 
-    this.state.progressText =
-      this.id === 'movement' || this.id === 'free'
-        ? ''
-        : `Success: ${this.successes} / ${this.attempts}`;
+    const label = COUNT_LABELS[this.id];
+    this.state.progressText = label
+      ? this.attempts === 0
+        ? `${label}: waiting for the first ball…`
+        : `${label}: ${this.successes} of ${this.attempts} balls`
+      : '';
     return this.state;
   }
 
@@ -144,16 +146,19 @@ export class TrainingSession {
         this.launch(4, 8, -3.4 - r() * 0.8, 1);
         break;
     }
-    if (this.id !== 'movement') this.attempts++;
   }
 
   private evaluate(landX: number): void {
-    // Success = the ball landed on the opponent side (for return drills)
-    // with drill-specific extras.
+    // A ball counts as an attempt only once it has resolved (landed), so
+    // the counter never shows an "open" attempt you haven't finished yet.
+    if (this.id === 'movement' || this.id === 'free') {
+      this.feedTimer = 0.9;
+      return;
+    }
+    this.attempts++;
+    // Success = the ball landed on the far side, with drill extras.
     let ok = landX > 0;
     if (this.id === 'attack') ok = ok && this.crossedNet && this.lastCrossSpeedY < -2;
-    if (this.id === 'jump' || this.id === 'angles') ok = landX > 0;
-    if (this.id === 'movement' || this.id === 'free') ok = false;
     if (ok) {
       this.successes++;
       this.state.successFlash = true;
@@ -162,14 +167,25 @@ export class TrainingSession {
   }
 }
 
+/** Progress-counter label per exercise (none = untracked free play). */
+const COUNT_LABELS: Record<string, string> = {
+  jump: 'Returned over the net',
+  serve: 'Serves that crossed',
+  clears: 'Cleared to the far side',
+  angles: 'Angled over the net',
+  attack: 'Spikes that landed',
+  wall: 'Wall saves converted',
+  net: 'Net rescues converted',
+};
+
 export const TRAINING_META: Record<string, { hint: string }> = {
   movement: { hint: 'Run wall to net and back. Short hops, full jumps — get a feel for the spring.' },
-  jump: { hint: 'Meet the falling ball at the top of your jump and knock it over the net.' },
-  serve: { hint: 'The ball drops over you. Position under it to shape your serve across the net.' },
-  clears: { hint: 'Balls come in hot. Get under them and pop them high and deep over the net.' },
-  angles: { hint: 'Let the ball strike the SIDE of your body to steer it — off-center contact = angle.' },
-  attack: { hint: 'Jump into the lob and contact it high, slightly in front — drive it down over the net.' },
-  wall: { hint: 'The ball ricochets off your back wall. Read the rebound and save it across.' },
-  net: { hint: 'Balls drop just behind the tape. Nudge them up with the net-side of your body.' },
-  free: { hint: 'Endless serve feed. Watch the predicted arc and experiment freely.' },
+  jump: { hint: 'Meet the falling ball at the top of your jump and knock it over the net. Any ball that lands on the far side counts.' },
+  serve: { hint: 'The ball drops over you. Position under it to shape your serve. It counts when it lands on the far side.' },
+  clears: { hint: 'Balls come in hot. Get under them and pop them high and deep over the net — landing on the far side counts.' },
+  angles: { hint: 'Let the ball strike the SIDE of your body to steer it — off-center contact = angle. Land it on the far side to score it.' },
+  attack: { hint: 'Jump into the lob and contact it high, slightly in front. Only balls driven DOWN across the net count.' },
+  wall: { hint: 'The ball ricochets off your back wall. Read the rebound and save it across — far-side landings count.' },
+  net: { hint: 'Balls drop just behind the tape. Nudge them up with the net-side of your body and over — far-side landings count.' },
+  free: { hint: 'Endless serve feed with the predicted arc shown. Nothing is counted here — just experiment.' },
 };

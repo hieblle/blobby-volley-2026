@@ -105,6 +105,7 @@ export class UI {
   private bannerEl: HTMLElement;
   private hintEl: HTMLElement;
   private trainingPanel: HTMLElement;
+  private ballMarker!: HTMLElement;
   private bannerTimer = 0;
 
   // Play screen state
@@ -157,7 +158,12 @@ export class UI {
     this.hintEl = el('div', 'hint-bar');
     this.trainingPanel = el('div', 'training-panel');
     this.trainingPanel.style.display = 'none';
-    this.hud.append(sb, this.matchPointEl, this.bannerEl, this.hintEl, this.trainingPanel);
+    // Off-screen ball indicator: shows where the ball is while it flies
+    // above the visible area.
+    this.ballMarker = el('div', 'ball-marker');
+    this.ballMarker.setAttribute('aria-hidden', 'true');
+    this.ballMarker.append(el('div', 'arrow'), el('div', 'dot'));
+    this.hud.append(sb, this.matchPointEl, this.bannerEl, this.hintEl, this.trainingPanel, this.ballMarker);
 
     this.buildTitle();
     this.buildPlay();
@@ -188,6 +194,16 @@ export class UI {
 
   setHudVisible(v: boolean): void {
     this.hud.classList.toggle('visible', v);
+  }
+
+  /** Position (screen px) of the above-view ball marker; null hides it. */
+  setBallMarker(screenX: number | null): void {
+    if (screenX === null) {
+      this.ballMarker.classList.remove('visible');
+    } else {
+      this.ballMarker.classList.add('visible');
+      this.ballMarker.style.left = `${screenX.toFixed(0)}px`;
+    }
   }
 
   setScoreboardVisible(v: boolean): void {
