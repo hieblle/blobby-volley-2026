@@ -11,6 +11,7 @@ import {
   ArenaId, Difficulty, Progress, Settings, STYLE_UNLOCK_WINS, unlockedStyles,
 } from '../settings';
 import type { MatchStats } from '../game/match';
+import { fetchLeaderboard } from '../net/leaderboard';
 
 export interface MatchSetup {
   mode: 'ai' | 'versus';
@@ -43,6 +44,8 @@ export interface UiCallbacks {
   onChangeMode(): void;
   onSettingsChanged(): void;
   onMenuSound(kind: 'move' | 'select'): void;
+  /** Submit a Survival score (rounds cleared) to the global leaderboard. */
+  onSubmitScore(rounds: number): void;
 }
 
 export const TRAINING_EXERCISES: { id: string; name: string; desc: string }[] = [
@@ -85,7 +88,9 @@ function keyName(code: string): string {
   return map[code] ?? code;
 }
 
-type ScreenName = 'title' | 'play' | 'settings' | 'training' | 'pause' | 'results' | 'howto' | 'none';
+type ScreenName =
+  | 'title' | 'play' | 'settings' | 'training' | 'pause' | 'results'
+  | 'howto' | 'leaderboard' | 'none';
 
 export class UI {
   private root: HTMLElement;
@@ -172,6 +177,7 @@ export class UI {
     this.buildPause();
     this.buildResults();
     this.buildHowTo();
+    this.buildLeaderboard();
     this.show('title');
   }
 
@@ -190,6 +196,7 @@ export class UI {
     for (const [n, s] of this.screens) s.classList.toggle('visible', n === name);
     if (name === 'play') this.refreshPlayScreen();
     if (name === 'settings') for (const r of this.settingsRefreshers) r();
+    if (name === 'leaderboard') this.refreshLeaderboard();
   }
 
   setHudVisible(v: boolean): void {
@@ -268,6 +275,7 @@ export class UI {
       btn('Play', '', () => { this.cb.onMenuSound('select'); this.show('play'); }),
       btn('Training Lab', '', () => { this.cb.onMenuSound('select'); this.show('training'); }),
       btn('Survival', '', () => { this.cb.onMenuSound('select'); this.cb.onStartSurvival(); }),
+      btn('Leaderboard', '', () => { this.cb.onMenuSound('select'); this.show('leaderboard'); }),
       btn('Settings', '', () => { this.cb.onMenuSound('select'); this.show('settings'); }),
       btn('How to Play', '', () => { this.cb.onMenuSound('select'); this.show('howto'); }),
     );
@@ -664,8 +672,118 @@ export class UI {
     stat('Saves — Player 1', String(data.stats.saves[0]));
     stat('Saves — Player 2', String(data.stats.saves[1]));
     body.append(grid);
+
+    // Survival runs can be submitted to the global leaderboard.
+    this.submitStatusEl = null;
+    this.submitBtn = null;
+    const rounds = data.survivalRounds ?? 0;
+    if (data.mode === 'survival' && rounds > 0) {
+      const box = el('div', 'opt-group submit-box');
+      box.append(el('h3', '', 'Global Leaderboard'));
+      const input = this.nameInput();
+      this.submitBtn = btn(`Submit ${rounds} ${rounds === 1 ? 'round' : 'rounds'}`, 'small', () => {
+        this.settings.playerName = input.value.trim().slice(0, 16);
+        this.cb.onSettingsChanged();
+        if (this.settings.playerName.length < 2) {
+          this.setSubmitStatus('Enter a name (at least 2 characters) first.');
+          return;
+        }
+        this.cb.onMenuSound('select');
+        this.cb.onSubmitScore(rounds);
+      });
+      const inRow = el('div', 'row');
+      inRow.append(input, this.submitBtn);
+      this.submitStatusEl = el('div', 'subtitle', 'Enter a name and submit your run.');
+      box.append(inRow, this.submitStatusEl);
+      body.append(box);
+    }
+
     this.refreshTitle();
     this.show('results');
+  }
+
+  // --- global leaderboard ----------------------------------------------------
+
+  private lbList: HTMLElement | null = null;
+  private lbNameInput: HTMLInputElement | null = null;
+  private submitStatusEl: HTMLElement | null = null;
+  private submitBtn: HTMLButtonElement | null = null;
+
+  private nameInput(): HTMLInputElement {
+    const input = el('input') as HTMLInputElement;
+    input.type = 'text';
+    input.maxLength = 16;
+    input.placeholder = 'Your name (2–16 chars)';
+    input.className = 'name-input';
+    input.setAttribute('aria-label', 'Leaderboard name');
+    input.value = this.settings.playerName;
+    input.addEventListener('change', () => {
+      this.settings.playerName = input.value.trim().slice(0, 16);
+      this.cb.onSettingsChanged();
+    });
+    return input;
+  }
+
+  private buildLeaderboard(): void {
+    const s = el('section');
+    s.append(
+      el('h2', '', 'Global Leaderboard'),
+      el('div', 'subtitle', 'Survival mode — rounds cleared. One entry per name, best run counts.'),
+    );
+    const nameRow = el('label', 'slider-row');
+    nameRow.append(el('span', '', 'Your name'));
+    this.lbNameInput = this.nameInput();
+    nameRow.append(this.lbNameInput);
+    this.lbList = el('div', 'lb-list');
+    this.lbList.setAttribute('role', 'list');
+    const row = el('div', 'row');
+    row.append(
+      btn('Refresh', 'small', () => { this.cb.onMenuSound('move'); this.refreshLeaderboard(); }),
+      btn('Play Survival', 'primary', () => { this.cb.onMenuSound('select'); this.cb.onStartSurvival(); }),
+      btn('Back', '', () => { this.cb.onMenuSound('select'); this.show('title'); }),
+    );
+    s.append(nameRow, this.lbList, row);
+    this.addScreen('leaderboard', s);
+  }
+
+  private lbRequest = 0;
+
+  refreshLeaderboard(): void {
+    if (!this.lbList) return;
+    if (this.lbNameInput) this.lbNameInput.value = this.settings.playerName;
+    const req = ++this.lbRequest;
+    this.lbList.textContent = 'Loading…';
+    void fetchLeaderboard().then((entries) => {
+      if (req !== this.lbRequest || !this.lbList) return; // stale response
+      this.lbList.innerHTML = '';
+      if (entries === null) {
+        this.lbList.append(el('div', 'subtitle',
+          'Leaderboard unreachable. It works on the deployed site once a Redis store is connected (see README).'));
+        return;
+      }
+      if (entries.length === 0) {
+        this.lbList.append(el('div', 'subtitle', 'No scores yet — survive a round and be the first!'));
+        return;
+      }
+      entries.forEach((e, i) => {
+        const row = el('div', 'lb-row');
+        row.setAttribute('role', 'listitem');
+        const me = this.settings.playerName && e.name === this.settings.playerName;
+        if (me) row.classList.add('me');
+        row.append(
+          el('span', 'lb-rank', `${i + 1}.`),
+          el('span', 'lb-name', e.name),
+          el('span', 'lb-score', `${e.score} ${e.score === 1 ? 'round' : 'rounds'}`),
+        );
+        this.lbList!.append(row);
+      });
+    });
+  }
+
+  /** Update the submit status line on the results screen. */
+  setSubmitStatus(text: string, done = false): void {
+    if (this.submitStatusEl) this.submitStatusEl.textContent = text;
+    if (done && this.submitBtn) this.submitBtn.disabled = true;
   }
 
   private buildHowTo(): void {

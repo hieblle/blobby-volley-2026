@@ -29,6 +29,8 @@ export interface Settings {
   winByTwo: boolean;
   p1Style: number;
   p2Style: number;
+  /** Display name for the global leaderboard (empty = not set yet). */
+  playerName: string;
 }
 
 export interface Progress {
@@ -59,6 +61,7 @@ export const DEFAULT_SETTINGS: Settings = {
   winByTwo: RULES.winByTwoDefault,
   p1Style: 0,
   p2Style: 1,
+  playerName: '',
 };
 
 function safeParse<T>(raw: string | null): Partial<T> | null {

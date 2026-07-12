@@ -241,6 +241,41 @@ input[type='range']:focus-visible { outline: var(--focus); }
 #debug-panel.visible { display: block; }
 #debug-panel button { font-size: 11px; padding: 3px 8px; margin: 2px 4px 0 0; border-radius: 6px; }
 
+.name-input {
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 8px 12px;
+  width: 220px;
+}
+.name-input:focus-visible { outline: var(--focus); outline-offset: 2px; }
+
+.lb-list {
+  display: flex; flex-direction: column; gap: 4px;
+  width: min(440px, 86vw); min-height: 80px; max-height: 44vh;
+  overflow-y: auto;
+}
+.lb-row {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px; padding: 7px 14px; font-size: 16px;
+}
+.lb-row.me { border: 2px solid var(--accent); background: rgba(255, 181, 74, 0.16); }
+.lb-rank { width: 34px; color: var(--ink-dim); font-weight: 700; }
+.lb-name { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-score { color: var(--accent); font-weight: 800; }
+.lb-row:nth-child(1) .lb-rank { color: #ffd75e; }
+.lb-row:nth-child(2) .lb-rank { color: #cfd6de; }
+.lb-row:nth-child(3) .lb-rank { color: #d9925e; }
+
+.submit-box {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 14px; margin-top: 4px; gap: 10px;
+}
+
 .results-stats {
   display: grid; grid-template-columns: auto auto; gap: 6px 26px;
   font-size: 16px;

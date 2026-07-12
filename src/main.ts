@@ -22,6 +22,7 @@ import { BOUNCER_STYLES } from './render/styles';
 import {
   loadProgress, loadSettings, saveProgress, saveSettings, Settings,
 } from './settings';
+import { submitScore } from './net/leaderboard';
 import { MatchSetup, ResultsData, TRAINING_EXERCISES, UI } from './ui/ui';
 import { lerp, clamp } from './util/math';
 
@@ -77,6 +78,7 @@ class App {
       },
       onSettingsChanged: () => this.applySettings(),
       onMenuSound: (k) => (k === 'select' ? this.audio.menuSelect() : this.audio.menuMove()),
+      onSubmitScore: (rounds) => void this.submitSurvivalScore(rounds),
     });
 
     this.applySettings();
@@ -349,6 +351,21 @@ class App {
       survivalRounds: this.survivalRound,
     };
     this.resultsTimer = 2.0;
+  }
+
+  private async submitSurvivalScore(rounds: number): Promise<void> {
+    const name = this.settings.playerName;
+    if (name.length < 2 || rounds < 1) return;
+    this.ui.setSubmitStatus('Submitting…');
+    const result = await submitScore(name, rounds);
+    if (result) {
+      this.ui.setSubmitStatus(
+        result.rank ? `Saved! You are rank #${result.rank} as ${name}.` : `Saved as ${name}!`,
+        true,
+      );
+    } else {
+      this.ui.setSubmitStatus('Leaderboard unreachable — your run was not submitted.');
+    }
   }
 
   // --- pause --------------------------------------------------------------

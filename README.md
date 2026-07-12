@@ -124,6 +124,27 @@ Difficulty knobs (`AI_LEVELS` in config): reaction delay, prediction error,
 decision cadence, aggression, placement skill, jumpiness, foresight,
 targeting. Survival rounds tighten these asymptotically — never the physics.
 
+## Global leaderboard (optional)
+
+Survival runs (rounds cleared) can be submitted to a shared online
+leaderboard — players enter a name (stored locally, one entry per name,
+best run counts) and everyone sees the top 20 under **Leaderboard** in the
+main menu.
+
+It's powered by a single serverless function (`api/leaderboard.js`) and a
+Redis store, and it is entirely optional — without it the game works
+normally and the leaderboard screen just shows "unreachable".
+
+To enable it on Vercel:
+
+1. Deploy the repo to Vercel (framework preset: Vite — auto-detected).
+2. In the Vercel project, open **Storage → Create Database → Upstash for
+   Redis** (free tier is plenty) and connect it to the project. This
+   injects the `KV_REST_API_URL` / `KV_REST_API_TOKEN` env vars the
+   function reads (Upstash's `UPSTASH_REDIS_REST_*` names work too).
+3. Redeploy. Done — `/api/leaderboard` now serves GET (top 20) and POST
+   (submit `{name, score}`, validated and capped server-side).
+
 ## Accessibility
 
 Remappable controls, reduced motion, ball outline, high-contrast court,
